@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jul 28 14:24:22 2021
 
+@author: Liam O'Brien
+"""
 import time
 import math
 import matplotlib.pyplot as plt
@@ -10,7 +15,6 @@ import torch.nn as nn
 from torch.autograd.functional import jacobian
 
 import dgl
-from dgl.nn.pytorch import GATConv
 from GCNLayers import GCNLayer1, GNODEFunc, ODEBlock
 
 
@@ -64,11 +68,11 @@ output_features = dataset[num_examples:, ::, ::]
 num_train = round((num_examples / 10)*6)
 
 
-X_train = input_features[:num_train][::][::]
-X_test = input_features[num_train:][::][::]
+X_train = input_features[:num_train, ::, ::]
+X_test = input_features[num_train:, ::, ::]
 
-Y_train = output_features[:num_train][::][::]
-Y_test = output_features[num_train:][::][::]
+Y_train = output_features[:num_train, ::, ::]
+Y_test = output_features[num_train:, ::, ::]
 
 #Creating the graph structure################################################
 
@@ -76,11 +80,23 @@ Y_test = output_features[num_train:][::][::]
 # 0 1 1
 # 0 0 1
 # 0 0 0
-#creating three cells indexed 0, 1, and 2
+#creating three cells indexed 0, 1, and 2 (and we want self-edges)
 g_top = dgl.heterograph({ ('cell','interacts','cell'):
-                             (torch.tensor([0,0,1]),
-                              torch.tensor([1,2,2]))})
-    
+                             (torch.tensor([0,1,2, 0,0,1]),
+                              torch.tensor([0,1,2, 1,2,2]))})
+
+#Now let's create a normalization tensor (based on the degree of
+#each node) to improve learning
+degs = g_top.in_degrees().float()
+norm = torch.pow(degs, -0.5) #each degree to the power of (-1/2)
+norm[torch.isinf(norm)] = 0
+# add to dgl.Graph in order for the norm to be accessible at training time
+g_top.ndata['norm'] = norm.unsqueeze(1).to(device)
+
+
+
+
+#Now we can define the model################################################
 #dynamics defined by two GCN layers
 gnn = nn.Sequential(GCNLayer1(g=g_top, in_feats=3, out_feats=64, 
                               dropout=0.5, activation=nn.Softplus()),
@@ -92,7 +108,6 @@ gnode_func = GNODEFunc(gnn)
 
 
 #ODEBlock class let's us use an ode solver to find our input at a later time
-#ode too stiff for adaptive solvers
 gnode = ODEBlock(gnode_func, method = 'implicit_adams', atol=1e-3, rtol=1e-4,
                  adjoint = True) 
 model = gnode
@@ -236,3 +251,11 @@ plt.legend()
 
 #we trained our model, and now we want to find the derivative of the
 #dynamics of each output with respect to each input
+total_J = torch.zeros(3,3,3,3)
+for observation in range(100):
+    #the jacobian gives causal dependencies at a given observation
+    J_gnn = jacobian(gnn.eval(), Y_test[observation])
+    #summing the jacobian is more revealing of average causal dependencies
+    total_J += J_gnn
+    
+print(J_gnn)
