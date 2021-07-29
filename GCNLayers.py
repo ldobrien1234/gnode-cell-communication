@@ -2,7 +2,7 @@
 """
 Created on Thu Jul  8 15:10:09 2021
 
-@author: obrie
+@author: Liam O'Brien
 """
 import math
 from typing import Callable
@@ -54,15 +54,19 @@ class GCNLayer1(nn.Module):
 
         if self.dropout:
             h = self.dropout(h) #randomly zeros elements in h
-           
-        h = torch.mm(h, self.weight) #matrix multiply h with weights
-        
         g = self.g
+        
+        h = torch.mm(h, self.weight) #matrix multiply h with weights
+        h = h*g.ndata['norm'] #multiply by degree normalization matrix
+        
+        
         g.ndata['h'] = h #make h the feature matrix of g
         g.update_all(fn.copy_src(src = 'h', out = 'm'),
                      fn.sum(msg = 'm', out = 'h'))
         
-        h = g.ndata['h']
+        h = g.ndata.pop('h')
+        h = h*g.ndata['norm'] #multiply by degree normalization matrix again
+        
         if self.bias is not None:
             h = h + self.bias
             
