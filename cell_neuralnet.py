@@ -236,18 +236,3 @@ plt.legend()
 
 #we trained our model, and now we want to find the derivative of the
 #dynamics of each output with respect to each input
-
-#we need to run our model a few times to find inputs to our model at t final
-test_points = []
-for i in range(10):
-    test_points += model(X_test[i])
-    
-get_jacobian(gnode_func, test_points[1], 9)
-
-#we want to sum the jacobians for all our
-total_J = 0
-for i in range(10):
-    J_gnode_func = jacobian(gnode_func, test_points[i])
-    total_J += J_gnode_func
-
-print(total_J)
