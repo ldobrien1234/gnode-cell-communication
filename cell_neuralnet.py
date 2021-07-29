@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jul 28 14:24:22 2021
 
-@author: obrie
-"""
 import time
 import math
 import matplotlib.pyplot as plt
