@@ -2,7 +2,7 @@
 In this repository, I created a Graph Neural Ordinary Differential Equation (GNODE) to
 model cell communication.
 
-The file Topology_Trajectories.jl was modified slightly from Franke and MacLean (https://github.com/maclean-lab/Cell-Cell-Communication).
+Topology_Trajectories.jl was modified slightly from Franke and MacLean (https://github.com/maclean-lab/Cell-Cell-Communication).
 I used their model to cell gene expression over time and create training data for the GNODE. cell_data_2000.txt contains 2000 training
 examples from their model. The first row in the text file contains inputs, while the second contains outputs. Each input
 and output is a 3 x 4 feature matrix. Each row represents a cell type, and the columns represent the gene expression
