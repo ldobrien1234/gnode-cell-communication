@@ -1,6 +1,7 @@
 # gnode-cell-communication
 In this repository, I created a Graph Neural Ordinary Differential Equation (GNODE) to
-model cell communication.
+model cell communication. I am still updating the code to improve the convergence of
+the neural network.
 
 Topology_Trajectories.jl was modified slightly from Franke and MacLean (https://github.com/maclean-lab/Cell-Cell-Communication).
 I used their model to simulate gene expression over time for a group of cells. 
