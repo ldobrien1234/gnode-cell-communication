@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Aug  7 12:22:49 2021
-
-@author: Liam O'Brien
-"""
-
 import torch
 from torch.utils.data import Dataset, DataLoader
 
