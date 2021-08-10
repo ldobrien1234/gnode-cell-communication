@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jul  8 15:10:09 2021
-
-@author: Liam O'Brien
-"""
 import math
 from typing import Callable
 
@@ -54,18 +48,17 @@ class GCNLayer1(nn.Module):
 
         if self.dropout:
             h = self.dropout(h) #randomly zeros elements in h
-        g = self.g
         
         h = torch.mm(h, self.weight) #matrix multiply h with weights
-        h = h*g.ndata['norm'] #multiply by degree normalization matrix
+        h = h*self.g.ndata['norm'] #multiply by degree normalization matrix
         
         
-        g.ndata['h'] = h #make h the feature matrix of g
-        g.update_all(fn.copy_src(src = 'h', out = 'm'),
+        self.g.ndata['h'] = h #make h the feature matrix of g
+        self.g.update_all(fn.copy_src(src = 'h', out = 'm'),
                      fn.sum(msg = 'm', out = 'h'))
         
-        h = g.ndata.pop('h')
-        h = h*g.ndata['norm'] #multiply by degree normalization matrix again
+        h = self.g.ndata.pop('h')
+        h = h*self.g.ndata['norm'] #multiply by degree normalization matrix again
         
         if self.bias is not None:
             h = h + self.bias
@@ -123,3 +116,8 @@ class ODEBlock(nn.Module):
                                      method=self.method)
             
         return out[-1]
+
+def compute_MAPE(target:torch.Tensor, output:torch.Tensor):
+    elementwise_mape = torch.abs((output - target) / output)
+    mape = torch.mean(elementwise_mape)
+    return mape
