@@ -1,4 +1,5 @@
-#Cell1_Model.md
+# Cell1_Model.md
+
 [Cell1_Model.md](Cell1_Model.md) contains files that both simulate the change in a cell's gene expression over time and model the cell's dynamics
 using a neural network.
 
