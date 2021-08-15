@@ -12,7 +12,7 @@ The loss values for each epoch are exported to [cell1_loss.txt](cell1_loss.txt),
 
 Then, the the file attempts to determine the causal dependencies. I sum the absolute values of the Jacobian of the dynamics with respect to the inputs at each evaluation time as proposed by [Aliee et al., 2021](https://arxiv.org/pdf/2106.12430.pdf). We get something like the following heat map.!
 
-[cell1_causes](https://user-images.githubusercontent.com/86622061/129490688-845d05fd-794d-4472-a31a-d5f40689b803.png)
+![cell1_causes](https://user-images.githubusercontent.com/86622061/129490688-845d05fd-794d-4472-a31a-d5f40689b803.png)
 
 
 
