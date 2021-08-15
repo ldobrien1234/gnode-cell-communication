@@ -6,6 +6,8 @@ using a neural network.
 ![cell1_loss](https://user-images.githubusercontent.com/86622061/129490456-0fa93103-7545-44d7-82c3-c853ef5b6953.png)
 ![cell1_mape](https://user-images.githubusercontent.com/86622061/129490462-bad052ed-fc58-4a25-bfcc-0f7218808410.png)
 
+The loss values for each epoch are exported to [cell1_loss.txt](cell1_loss.txt).
+
 
 
 
