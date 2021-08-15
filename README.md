@@ -3,7 +3,7 @@ In this repository, I created a *Graph Neural Ordinary Differential Equation (GN
 model cell communication. **I am still updating the code to improve the convergence of
 the neural network.**
 
-[Topology_Trajectories.jl](Topology_Trajectories.jl) was modified slightly [from Franke and MacLean](https://github.com/maclean-lab/Cell-Cell-Communication).
+[Topology_Trajectories.jl](Topology_Trajectories.jl) was modified slightly from [Franke and MacLean](https://github.com/maclean-lab/Cell-Cell-Communication).
 I used their model to simulate gene expression over time for a group of cells. 
 cell_data_2000.txt contains 2000 training examples from their model. The first row in the text file contains inputs, 
 while the second contains outputs. Each input and output is a 3 x 4 feature matrix. Each row represents a cell type, 
