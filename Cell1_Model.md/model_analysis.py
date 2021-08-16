@@ -26,7 +26,7 @@ torch.manual_seed(0) #seed for random numbers
 with torch.no_grad():
 
     #get dataset from file
-    dataset = NODEData("Small_Features.txt", "Small_TimeSeries.txt")
+    dataset = NODEData("Cell1_Features.txt", "Cell1_TimeSeries.txt")
     #get the trained neural network from the file
     num_eval = dataset.num_eval    
     
@@ -54,10 +54,11 @@ with torch.no_grad():
     
     #define ODEBlock class so numerical integration calls the model
     #same as in neural_ode.py
+    #define ODEBlock class so numerical integration calls the model
     class ODEBlock(nn.Module):
         
         def __init__(self, ode_func:nn.Module, method:str='rk4',
-                      rtol:float=1e-3, atol:float=1e-4, T:int=1):
+                     rtol:float=1e-3, atol:float=1e-4, T:int=1):
             super().__init__()
             self.ode_func = ode_func
             self.method = method
@@ -67,12 +68,13 @@ with torch.no_grad():
         #forward pass 
         def forward(self, h:torch.Tensor):
             eval_int = self.T / num_eval
-            tspan = torch.empty(num_eval)
-            for i in range(num_eval):
+            
+            tspan = torch.empty(num_eval+1)
+            for i in range(num_eval + 1):
                 tspan[i] = i*eval_int
             
             h_final = odeint_adjoint(self.ode_func, h, tspan, method=self.method,
-                              rtol=self.rtol, atol=self.atol)
+                             rtol=self.rtol, atol=self.atol)
             return h_final
         
     model_state_dict = torch.load("Cell1_Model.pt")
@@ -103,18 +105,20 @@ with torch.no_grad():
     
 #getting the features individually
 #dimension (num_eval)
-h_finalG = h_final[::,0]
+#note: h_final includes the state at t=0 while targets does not
+h_finalG = h_final[1:,0]
 targetG = targets[::,0]
 
 
-h_finalP = h_final[::,1]
+h_finalP = h_final[1:,1]
 targetP = targets[::,1]
 
-h_finalX = h_final[::,2]
+h_finalX = h_final[1:,2]
 targetX = targets[::,2]
 
 num_eval = dataset.num_eval
-x_axis = torch.arange(0, num_examples)
+
+x_axis = torch.arange(0, num_eval)
     
 plt.plot(x_axis, h_finalG, linestyle='solid', color='red', label='prediction')
 plt.plot(x_axis, targetG, linestyle='solid', color='black',label='ground truth')
@@ -142,7 +146,9 @@ J_model = torch.abs(J_model)
 
 genes = ["G", "P", "X"]
 sns.heatmap(J_model, xticklabels=genes, yticklabels=genes, cmap="YlGnBu")
-
+     
+    
+    
 
 
 
