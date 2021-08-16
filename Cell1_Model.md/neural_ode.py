@@ -80,8 +80,9 @@ class ODEBlock(nn.Module):
     #forward pass 
     def forward(self, h:torch.Tensor):
         eval_int = self.T / num_eval
-        tspan = torch.empty(num_eval)
-        for i in range(num_eval):
+        
+        tspan = torch.empty(num_eval+1)
+        for i in range(num_eval + 1):
             tspan[i] = i*eval_int
         
         h_final = odeint_adjoint(self.ode_func, h, tspan, method=self.method,
@@ -122,8 +123,9 @@ for epoch in range(train_epochs):
         total_MAPE = 0
         #getting the loss for each evaluation time
         for j in range(num_eval):
-            y_pred = h_final[j,::,::] #the features at evaluation step j
-            target = targets[::,j,::] #the targets at evaluation step j
+            #the features and targets at a certain evaluation step
+            y_pred = h_final[(j+1),::,::] #the 0th index is t=0
+            target = targets[::,j,::]  #the 0th index is the 1st eval after 0
             
             #compute the loss and MAPE for one evaluation time
             #divide by num_eval so we don't get nan
@@ -169,7 +171,7 @@ for epoch in range(test_epochs):
             total_loss = 0
             total_MAPE = 0
             for j in range(num_eval):
-                y_pred = h_final[j,::,::]
+                y_pred = h_final[(j+1),::,::]
                 target = targets[::,j,::]
                 
                 loss = criterion(target, y_pred) / num_eval
