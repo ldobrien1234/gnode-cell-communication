@@ -161,7 +161,7 @@ for epoch in range(test_epochs):
     
     with torch.no_grad(): #so we don't take up resources computing gradients
         
-        for i, (inputs, targets) in enumerate(test_loader):
+        for inputs, targets in test_loader:
             
             inputs = inputs.to(device)
             targets = targets.to(device)
