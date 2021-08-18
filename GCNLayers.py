@@ -8,9 +8,10 @@ import dgl.function as fn
 import torch
 import torch.nn as nn
 import torchdiffeq
-
     
-class GCNLayer1(nn.Module):
+    
+    
+class GCNLayer(nn.Module):
     """
     General GCN Layer
     """
