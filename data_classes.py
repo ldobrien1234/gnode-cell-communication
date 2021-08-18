@@ -1,77 +1,46 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
-
-class NODEData(Dataset):
-    
-    def __init__(self, filename:str):
-        
-        file = open(filename, "r")
-        data_string = "[" + file.read() + "]"
-        file.close()
-        
-        #modifying the string, so eval() works and finds nested lists
-        data_string = data_string.replace(" ","") #removes spaces
-        data_string = data_string.replace(";",",")
-        data_string = data_string.replace("]\t[","],[")
-        data_string = data_string.replace("]\n[","],[")
-        
-        #convert the string to a list of lists
-        dataset = eval(data_string)
-        
-        dataset = torch.tensor(dataset)
-        
-        #removing A0 from the features
-        dataset = dataset[::, ::, :3]
-        #input is a 9-vector
-        dataset = torch.reshape(dataset, (dataset.size()[0],1,9))
-        
-        #the number of training examples in the data 
-        self.num_examples = int(dataset.size()[0] / 2)
-        
-        self.X = dataset[:self.num_examples, ::, ::]
-        self.Y = dataset[self.num_examples:, ::, ::]
-    
-    def __getitem__(self, index):
-        return self.X[index], self.Y[index]
-    
-    def __len__(self):
-        return self.num_examples
-    
-
+#lets us use our computer's gpu if it's available
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class GNODEData(Dataset):
     
-    def __init__(self, filename:str):
+    def __init__(self, features_file:str, targets_file:str):
         
-        super().__init__()
+        f_file = open(features_file, "r")
+        self.features = f_file.readlines()
+        f_file.close()
         
-        file = open(filename, "r")
-        data_string = "[" + file.read() + "]"
-        file.close()
+        t_file = open(targets_file, "r")
+        self.targets = t_file.readlines()
+        t_file.close()
         
-        #modifying the string, so eval() works and finds nested lists
-        data_string = data_string.replace(" ","") #removes spaces
-        data_string = data_string.replace(";",",")
-        data_string = data_string.replace("]\t[","],[")
-        data_string = data_string.replace("]\n[","],[")
+        num_examples = len(self.features)
         
-        #convert the string to a list of lists
-        dataset = eval(data_string)
+        #selecting any index to get info about dataset
+        feature, target = self.__getitem__(index=0)
         
-        dataset = torch.tensor(dataset)
+        self.num_eval = target.size()[1]
+        self.nCell = target.size()[0]
+        self.num_examples = num_examples
         
-        #removing A0 from the features
-        dataset = dataset[::, ::, :3]
-     
-        #the number of training examples in the data 
-        self.num_examples = int(dataset.size()[0] / 2)
         
-        self.X = dataset[:self.num_examples, ::, ::]
-        self.Y = dataset[self.num_examples:, ::, ::]
     
     def __getitem__(self, index):
-        return self.X[index], self.Y[index]
+        feature = self.features[index]
+        feature = eval(feature)
+        feature = torch.tensor(feature)[::,:3]
+        
+        target = self.targets[index]
+        target = target.replace("Any","")
+        target = target.replace("Vector{}","")
+        target = target.replace("\n","")
+        target = eval(target)
+        target = torch.tensor(target)
+        target = torch.squeeze(target)
+        
+        return feature, target
     
     def __len__(self):
         return self.num_examples
