@@ -74,10 +74,10 @@ g_top = dgl.heterograph({('cell','interacts','cell'):
 
 #Now we can define the model################################################
 #dynamics defined by two GCN layers
-gnn = nn.Sequential(GCNLayer1(g=g_top, batch_size=batch_size, nCell=nCell,
+gnn = nn.Sequential(GCNLayer(g=g_top, batch_size=batch_size, nCell=nCell,
                               in_feats=20, out_feats=50, 
                               dropout=0.5, activation=nn.LeakyReLU()),
-                    GCNLayer1(g=g_top, batch_size=batch_size, nCell=nCell,
+                    GCNLayer(g=g_top, batch_size=batch_size, nCell=nCell,
                               in_feats=50, out_feats=20, 
                             dropout=None, activation=None)
                   ).to(device)
@@ -98,7 +98,7 @@ gnode = ODEBlock(gnode_func, tspan=tspan, method = 'rk4', atol=1e-3,
                  rtol=1e-4, adjoint=True)
 
 #model outputs a tensor of dimension (num_eval, nCell, no. features)
-model = nn.Sequential(GCNLayer1(g=g_top, batch_size=batch_size, nCell=nCell,
+model = nn.Sequential(GCNLayer(g=g_top, batch_size=batch_size, nCell=nCell,
                                 in_feats=3, out_feats=20,
                                 dropout=0.5, activation=nn.LeakyReLU()),
                       gnode,
