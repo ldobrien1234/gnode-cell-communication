@@ -1,18 +1,9 @@
 # gnode-cell-communication
-In this repository, I created a *Graph Neural Ordinary Differential Equation (GNODE)* to
-model cell communication. **I am still updating the code to improve the convergence of
-the neural network.**
+In this repository, I am working to use a *Graph Neural Ordinary Differential Equation (GNODE)* to
+model cell communication.
 
-[Topology_Trajectories.jl](Topology_Trajectories.jl) was modified slightly from [Franke and MacLean](https://github.com/maclean-lab/Cell-Cell-Communication).
-I used their model to simulate gene expression over time for a group of cells. 
-cell_data_2000.txt contains 2000 training examples from their model. The first row in the text file contains inputs, 
-while the second contains outputs. Each input and output is a 3 x 4 feature matrix. Each row represents a cell type, 
-and the columns represent the gene expression levels of GATA1, PU.1, X (a regulatory gene), and a parameter A0. I only 
-used the first three columns when training the GNODE.
+I will use the model proposed by [Franke and MacLean](https://github.com/maclean-lab/Cell-Cell-Communication) to simulate gene expression over time for a group of cells. The latent state of the system is described by a 3 x 3 matrix. Each row represents a cell and the columns represent the gene expression levels of GATA1, PU.1, and X (a regulatory gene).
 
-[cell_neuralnet.py](cell_neuralnet.py) trains a GNODE to find the final gene expression of the cells given the initial states and a
-graph describing which cells communicate. In observational data, we could infer graph structure based on 
-ligand-receptor pairs between cell types. After training the GNODE, the file also computes the Jacobian of the gene dynamics
-at the final time. This lets us infer which cell types are influencing others. The neural network can easily be modified to 
-incorporate time-series data. With more time-points, the network might be better at learning the gene 
-dynamics and causal relationships between cell types.
+Then, I will train a GNODE to learn the cell-communication model. Additionally, I want to show that we can recover the causal structure of the model. By computing the jacobian of the dynamics, we can infer which genes affect each other and which cells affect each other.
+
+The folders [Cell1_Model.md](Cell1_Model.md) and [Cell123_Model.md](Cell123_Model.md) contain simpler cases of what's proposed above. In each file, I use a simplified version of the model from Franke and Maclean, which doesn't incorporate cell-communication. And I use a standard neural ODE, which can't incorporate relationships between cells. Cell1_Model.md models the trajectory of one cell, while Cell123_Model.md models the trajectory of three cells. Both models perform well.
