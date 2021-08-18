@@ -1,3 +1,4 @@
+
 import math
 from typing import Callable
 
@@ -8,25 +9,29 @@ import torch
 import torch.nn as nn
 import torchdiffeq
 
-
+    
 class GCNLayer1(nn.Module):
     """
     General GCN Layer
     """
-    def __init__(self, g:dgl.heterograph, in_feats:int, out_feats:int, 
+    def __init__(self, g:dgl.heterograph, batch_size:int, nCell:int,
+                 in_feats:int, out_feats:int, 
                  activation:Callable[[torch.Tensor], torch.Tensor],
-                 dropout:int, bias:bool=True):
+                 dropout:int):
         super().__init__()
         self.g = g
+        self.in_feats = in_feats
+        self.out_feats = out_feats
         
-        self.weight = nn.Parameter(torch.Tensor(in_feats, out_feats))
         
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(out_feats))
-        else:
-            self.bias = None
+        self.Linear = nn.Linear(in_feats, out_feats)
+        self.norm = nn.BatchNorm1d(nCell)
+        
+        self.batch_size = batch_size
                 
         self.activation = activation
+        
+        self.graphs = [self.g]*self.batch_size #create a list of all graphs
             
         if dropout:
             #randomly zeroes some elements of the input tensor
@@ -35,39 +40,39 @@ class GCNLayer1(nn.Module):
             self.dropout = 0.
             
         self.reset_parameters()
-        
+    
     def reset_parameters(self):
-        #randomly chooses parameters from uniform distributions
-        stdv = 1. / math.sqrt(self.weight.size(1)) #1/sqrt(out_feats)
-        self.weight.data.uniform_(-stdv, stdv)
-        if self.bias is not None:
-            self.bias.data.uniform_(-stdv, stdv)
+        torch.nn.init.uniform_(self.Linear.weight)
     
     def forward(self, h):
-        #defines the forward pass through the layer given feature matrix h
-
+        #defines the forward pass through the layer given batch tensor h
+        #h has dimension (batch_size, nCell, no. features)
+        
         if self.dropout:
             h = self.dropout(h) #randomly zeros elements in h
+            
+        h = self.Linear(h)
+        h = self.norm(h)
         
-        h = torch.mm(h, self.weight) #matrix multiply h with weights
-        h = h*self.g.ndata['norm'] #multiply by degree normalization matrix
+        g_batch = dgl.batch(self.graphs)
         
+        features = torch.reshape(h, (3*self.batch_size, self.out_feats))
+        g_batch.ndata['h'] = features
         
-        self.g.ndata['h'] = h #make h the feature matrix of g
-        self.g.update_all(fn.copy_src(src = 'h', out = 'm'),
+        g_batch.update_all(fn.copy_src(src = 'h', out = 'm'),
                      fn.sum(msg = 'm', out = 'h'))
         
-        h = self.g.ndata.pop('h')
-        h = h*self.g.ndata['norm'] #multiply by degree normalization matrix again
-        
-        if self.bias is not None:
-            h = h + self.bias
-            
+        h = g_batch.ndata.pop('h')
+        h = torch.reshape(h,(self.batch_size, self.g.number_of_nodes(), self.out_feats))
+
         if self.activation:
             h = self.activation(h)
         
         return h
-        
+    
+    
+    
+    
 class GNODEFunc(nn.Module):
     """
     General GNODE function class. To be passed to an ODEBlock
@@ -89,18 +94,18 @@ class ODEBlock(nn.Module):
     ODEBlock defines forward method that uses an ode solver to solve 
     for the final feature matrix.
     """
-    def __init__(self, gnode_func:nn.Module, method:str='dopri5', 
-                 rtol:float=1e-3, atol:float=1e-4, adjoint:bool=True):
+    def __init__(self, gnode_func:nn.Module, tspan:torch.Tensor=torch.tensor([0,1]),
+                 method:str='dopri5', rtol:float=1e-3, atol:float=1e-4, adjoint:bool=True):
         super().__init__()
         self.gnode_func = gnode_func
         self.method = method
         self.adjoint_flag = adjoint
         self.atol, self.rtol = atol, rtol
+        self.integration_time = tspan.float()
         
     def forward(self, h:torch.tensor, T:int=1):
         #uses ode solver to solve for output features at time T
         
-        self.integration_time = torch.tensor([0, T]).float()
         self.integration_time = self.integration_time.type_as(h)
 
         #complete numerical integration
@@ -115,7 +120,8 @@ class ODEBlock(nn.Module):
                                      rtol=self.rtol, atol=self.atol, 
                                      method=self.method)
             
-        return out[-1]
+        return out
+
 
 def compute_MAPE(target:torch.Tensor, output:torch.Tensor):
     elementwise_mape = torch.abs((output - target) / output)
