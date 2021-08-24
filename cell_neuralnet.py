@@ -1,6 +1,7 @@
 
 import matplotlib.pyplot as plt
 
+import statistics
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,8 +13,9 @@ from data_classes import GNODEData
 
 batch_size=100
 
-train_epochs = 5
-test_epochs = 2 
+patience = 50 #for early stopping
+
+train_epochs = 10
 
 #final time of the numerical integrator
 t_f = 10
@@ -48,7 +50,7 @@ nCell = dataset.nCell
 
 
 #split into train and test
-size_train = round((dataset.__len__() / 10)*8)
+size_train = round((dataset.__len__() / 10)*5)
 train, test = random_split(dataset, 
                            [size_train, dataset.__len__() - size_train])
 
@@ -68,17 +70,17 @@ test_loader = DataLoader(test, batch_size=batch_size, shuffle=True)
 
 #complete graph
 g_top = dgl.heterograph({('cell','interacts','cell'):
-                              (torch.tensor([0,1,2, 0,0, 1,1, 2,2]),
-                              torch.tensor([0,1,2, 1,2, 0,2, 0,1]))})
+                              (torch.tensor([0,1,2]),
+                              torch.tensor([0,1,2]))})
 
 
 #Now we can define the model################################################
 #dynamics defined by two GCN layers
-gnn = nn.Sequential(GCNLayer(g=g_top, batch_size=batch_size, nCell=nCell,
-                              in_feats=20, out_feats=50, 
-                              dropout=0.5, activation=nn.LeakyReLU()),
-                    GCNLayer(g=g_top, batch_size=batch_size, nCell=nCell,
-                              in_feats=50, out_feats=20, 
+gnn = nn.Sequential(GCNLayer2(g=g_top, batch_size=batch_size, nCell=nCell,
+                              in_feats=20, out_feats=64, 
+                              dropout=None, activation=nn.LeakyReLU()),
+                    GCNLayer2(g=g_top, batch_size=batch_size, nCell=nCell,
+                              in_feats=64, out_feats=20, 
                             dropout=None, activation=None)
                   ).to(device)
                    
@@ -98,89 +100,92 @@ gnode = ODEBlock(gnode_func, tspan=tspan, method = 'rk4', atol=1e-3,
                  rtol=1e-4, adjoint=True)
 
 #model outputs a tensor of dimension (num_eval, nCell, no. features)
-model = nn.Sequential(GCNLayer(g=g_top, batch_size=batch_size, nCell=nCell,
-                                in_feats=3, out_feats=20,
-                                dropout=0.5, activation=nn.LeakyReLU()),
+model = nn.Sequential(nn.Linear(3,20),
+                      nn.LeakyReLU(),
                       gnode,
-                      nn.Linear(20,3))
+                      nn.Linear(20,3),
+                      nn.LeakyReLU())
                       
 
-opt = torch.optim.Adam(model.parameters())
+opt = torch.optim.Adam(model.parameters(),lr=1e-2)
 criterion = nn.MSELoss()
 
 
 steps = 0
 train_y_plt = []
 train_mape_plt = []
+
+test_y_plt = []
+test_mape_plt = []
 #running the training loop
 for epoch in range(train_epochs):
-    model.train()
+
     
-    for (features, targets) in train_loader:
-          
-        features = features.to(device) #dimension (batch_size, nCell, no. features)
-        targets = targets.to(device) #dimension (batch_size, nCell, num_eval, no. features)
+    for (train_f, train_t), (test_f, test_t) in zip(train_loader, test_loader):
+        model.train()
         
-        h_final = model(features) #dimension (num_eval+1, batch_size, nCell, no. features)
+        steps += 1
         
+        train_f = train_f.to(device) #dimension (batch_size, nCell, no. features)
+        train_t = train_t.to(device) #dimension (batch_size, nCell, num_eval, no. features)
+        
+        h_final = model(train_f) #dimension (num_eval+1, batch_size, nCell, no. features)
+
         #make h_final have dimension (batch_size, nCell, num_eval, no. features)
         #now directly comparable with targets
         h_final = h_final[1:,::,::,::].permute(1,2,0,3)
         
-        loss = criterion(targets, h_final)
-        MAPE = compute_MAPE(targets, h_final)
+        train_loss = criterion(train_t, h_final)
+        train_MAPE = compute_MAPE(train_t, h_final)
         
         opt.zero_grad()
-        loss.backward()
+        train_loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1e+5) #avoid exploding gradient
         opt.step()
-            
-        steps += 1
-            
-        print("train loss = ", loss.item())
-        print("train MAPE = ", MAPE.item())
-        print("steps = ", steps)
-        train_y_plt.append(loss.item())
-        train_mape_plt.append(MAPE.item())
-                
         
-
-
-steps = 0
-test_y_plt = []
-test_mape_plt = []
-#running the testing loop
-for epoch in range(test_epochs):
-    model.eval()
+        print("train loss = ", train_loss.item())
+        print("train MAPE = ", train_MAPE.item())
+        train_y_plt.append(train_loss.item())
+        train_mape_plt.append(train_MAPE.item())
     
-    with torch.no_grad():
-        
-        for (features, targets) in test_loader:
-            
-            features = features.to(device) #dimension (batch_size, nCell, no. features)
-            targets = targets.to(device) #dimension (batch_size, nCell, num_eval, no. features)
+        #training concurrently with testing
+        with torch.no_grad():
+            model.eval()
+    
+                
+            test_f = test_f.to(device) #dimension (batch_size, nCell, no. features)
+            test_t = test_t.to(device) #dimension (batch_size, nCell, num_eval, no. features)
              
-            h_final = model(features) #dimension (num_eval+1, nCell, no. features)
-                 
+            h_final = model(test_f) #dimension (num_eval+1, nCell, no. features) 
+            
             #make h_final have dimension (batch_size, nCell, num_eval, no. features)
             #now directly comparable with targets
             h_final = h_final[1:,::,::,::].permute(1,2,0,3)
             
-            loss = criterion(targets, h_final)
-            MAPE = compute_MAPE(targets, h_final)
-
-            steps += 1
+            test_loss = criterion(test_t, h_final)
+            test_MAPE = compute_MAPE(test_t, h_final)
            
-            print("test loss = ", loss.item())
-            print("test MAPE = ", MAPE.item())
+            print("test loss = ", test_loss.item())
+            print("test MAPE = ", test_MAPE.item())
             print("steps = ", steps)
-            test_y_plt.append(loss.item())
-            test_mape_plt.append(MAPE.item())
+            test_y_plt.append(test_loss.item())
+            test_mape_plt.append(test_MAPE.item())
+    
+        #if testing loss is increasing, we want to stop training
+        #average testing loss over 10 epochs
+        if (steps > 2*patience):
+            old_test_loss = statistics.mean(test_y_plt[steps-2*patience:steps-patience])
+            new_test_loss = statistics.mean(test_y_plt[steps-patience:steps])
+            
+            if new_test_loss > old_test_loss:
+                print("Early stopping"+"\n"+"Training and test loss diverge")
+                break
             
 
 
 
 #save the trained model in a file
-torch.save(model.state_dict(), "GNODE_Model.pt")
+torch.save(model.state_dict(), "GNODE_Model8.pt")
 
 
 
@@ -207,7 +212,7 @@ plt.plot(test_x_plt, test_mape_plt, 'orange', label = 'test MAPE')
 plt.legend()
     
 #save the training loss in a file
-text_file = open("gnode_loss.txt", "w")
+text_file = open("gnode_loss8.txt", "w")
 for loss, MAPE in zip(train_y_plt, train_mape_plt):
     message = "loss = " + str(loss) +", MAPE = " + str(MAPE) + "\n"
     text_file.write(message)
