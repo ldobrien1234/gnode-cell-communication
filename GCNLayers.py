@@ -10,8 +10,7 @@ import torch.nn as nn
 import torchdiffeq
     
     
-    
-class GCNLayer(nn.Module):
+class GCNLayer2(nn.Module):
     """
     General GCN Layer
     """
@@ -23,6 +22,7 @@ class GCNLayer(nn.Module):
         self.g = g
         self.in_feats = in_feats
         self.out_feats = out_feats
+        self.nCell = nCell
         
         
         self.Linear = nn.Linear(in_feats, out_feats)
@@ -52,12 +52,12 @@ class GCNLayer(nn.Module):
         if self.dropout:
             h = self.dropout(h) #randomly zeros elements in h
             
+        h = h / 100 #ensures we don't get nan outputs
         h = self.Linear(h)
-        h = self.norm(h)
         
         g_batch = dgl.batch(self.graphs)
         
-        features = torch.reshape(h, (3*self.batch_size, self.out_feats))
+        features = torch.reshape(h, (self.nCell*self.batch_size, self.out_feats))
         g_batch.ndata['h'] = features
         
         g_batch.update_all(fn.copy_src(src = 'h', out = 'm'),
@@ -70,8 +70,6 @@ class GCNLayer(nn.Module):
             h = self.activation(h)
         
         return h
-    
-    
     
     
 class GNODEFunc(nn.Module):
