@@ -2,7 +2,7 @@
 In this repository, I am working to use a *Graph Neural Ordinary Differential Equation (GNODE)* to
 model cell communication.
 
-I will use the model proposed by [Franke and MacLean](https://github.com/maclean-lab/Cell-Cell-Communication) to simulate gene expression over time for a group of cells. The latent state of the system is described by a 3 x 3 matrix. Each row represents a cell and the columns represent the gene expression levels of GATA1, PU.1, and X (a regulatory gene).
+I will use the model proposed by [Franke and MacLean](https://github.com/maclean-lab/Cell-Cell-Communication) to simulate gene expression over time for a group of blood progenitor cells. The latent state of the system is described by a 3 x 3 matrix. Each row represents a cell and the columns represent the gene expression levels of GATA1, PU.1, and X (a regulatory gene).
 
 Then, I will train a GNODE to learn the cell-communication model. Additionally, I want to show that we can recover the causal structure of the model. By computing the jacobian of the dynamics, we can infer which genes affect each other and which cells affect each other.
 
