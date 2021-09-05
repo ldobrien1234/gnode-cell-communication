@@ -1,6 +1,6 @@
 # Cell123_Model.md
 
-[Cell123_Model.md](Cell123_Model.md) contains both files that simulate the gene expression of three cells to create a dataset and files that use a *neural ODE* to uncover the dynamics of the cells given time-series data.
+[Cell123_Model.md](Cell123_Model.md) contains files that simulate the gene expression of three cells to create a dataset, and it contains files that use a *neural ODE* to uncover the dynamics of the cells given time-series data.
 
 [Cell123_TimeSeries_Simulation.jl](Cell123_TimeSeries_Simulation.jl) uses the system of differential equations from [Chickarmane et al](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1000268) to model the change in gene expression of three cells over time and create a dataset.
 
