@@ -1,6 +1,6 @@
 # gnode-cell-communication
 In this repository, I am working to use a *Graph Neural Ordinary Differential Equation (GNODE)* to
-model cell communication. **This repository is still a work in progress, so I apologize for any incompleteness.**
+model cell communication. **This repository was a summer project that ended abruptly, so I apologize for any incompleteness.**
 
 I will use the model proposed by [Franke and MacLean](https://github.com/maclean-lab/Cell-Cell-Communication) to simulate gene expression over time for a group of blood progenitor cells. The latent state of the system is described by a 3 x 3 matrix. Each row represents a cell and the columns represent the gene expression levels of GATA1, PU.1, and X (a regulatory gene).
 
